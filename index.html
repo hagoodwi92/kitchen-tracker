@@ -8,14 +8,14 @@
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
 
   :root{
-    --paper:#EDE7DA;
-    --ink:#2B2620;
-    --board:#8A3324;
-    --board-dark:#6E271B;
-    --sage:#5C6B4F;
-    --gold:#C99A3E;
-    --line:#c9bfa8;
-    --card:#F6F2E8;
+    --paper:#1B1712;
+    --ink:#F0E6D2;
+    --board:#E8730E;
+    --board-dark:#B5540A;
+    --sage:#5C3B7A;
+    --gold:#F2A93B;
+    --line:#4a3f2e;
+    --card:#241E16;
   }
   *{box-sizing:border-box;}
   body{
@@ -24,13 +24,15 @@
     color:var(--ink);
     font-family:'Inter',sans-serif;
     padding-bottom:60px;
+    -webkit-font-smoothing:antialiased;
   }
   header{
-    background:var(--board);
+    background:linear-gradient(155deg, var(--board) 0%, var(--board-dark) 100%);
     color:var(--paper);
-    padding:28px 20px 22px;
+    padding:30px 22px 24px;
     position:relative;
     overflow:hidden;
+    box-shadow:0 2px 14px rgba(0,0,0,.35);
   }
   header::after{
     content:"";
@@ -38,25 +40,32 @@
     right:-30px; top:-30px;
     width:140px; height:140px;
     border-radius:50%;
-    background:var(--board-dark);
-    opacity:.5;
+    background:rgba(0,0,0,.18);
   }
   header h1{
     font-family:'Fraunces',serif;
     font-weight:700;
-    font-size:28px;
-    margin:0 0 4px;
+    font-size:27px;
+    margin:0 0 5px;
     letter-spacing:-0.02em;
     position:relative;
+    line-height:1.15;
   }
   header p{
     margin:0;
     font-family:'DM Mono',monospace;
-    font-size:12px;
+    font-size:11.5px;
     opacity:.85;
     position:relative;
     text-transform:uppercase;
     letter-spacing:.08em;
+  }
+  header p.sam-tag{
+    margin-top:10px;
+    color:var(--gold);
+    opacity:1;
+    font-size:10.5px;
+    letter-spacing:.06em;
   }
   .tabs{
     display:flex;
@@ -65,19 +74,20 @@
     position:sticky;
     top:0;
     z-index:10;
+    box-shadow:0 2px 8px rgba(0,0,0,.25);
   }
   .tab{
     flex:1;
     text-align:center;
-    padding:13px 4px;
+    padding:14px 4px;
     font-family:'DM Mono',monospace;
     font-size:11px;
     letter-spacing:.05em;
     text-transform:uppercase;
-    color:#9a8f78;
+    color:#8a7d68;
     cursor:pointer;
     border-bottom:2px solid transparent;
-    transition:.15s;
+    transition:color .15s, border-color .15s;
   }
   .tab.active{
     color:var(--board);
@@ -92,9 +102,10 @@
   .card{
     background:var(--card);
     border:1px solid var(--line);
-    border-radius:2px;
+    border-radius:10px;
     padding:18px;
     margin-bottom:14px;
+    box-shadow:0 1px 3px rgba(0,0,0,.25);
   }
   .eyebrow{
     font-family:'DM Mono',monospace;
@@ -103,28 +114,31 @@
     text-transform:uppercase;
     color:var(--sage);
     margin:0 0 8px;
+    filter:brightness(1.5);
   }
   h2{
     font-family:'Fraunces',serif;
     font-size:19px;
     margin:0 0 12px;
     font-weight:600;
+    letter-spacing:-0.01em;
   }
   .meal-grid{display:flex;flex-direction:column;gap:8px;}
   .meal-row{
     display:flex;
     align-items:center;
     gap:10px;
-    padding:10px 12px;
+    padding:11px 12px;
     background:var(--paper);
     border:1px solid var(--line);
-    border-radius:2px;
+    border-radius:8px;
     cursor:pointer;
     user-select:none;
+    transition:border-color .15s, background-color .15s;
   }
   .meal-row.checked{
     border-color:var(--board);
-    background:#f2e3dc;
+    background:rgba(232,115,14,0.16);
   }
   .box{
     width:18px;height:18px;
@@ -144,6 +158,7 @@
     flex:1;
     background:var(--paper);
     border:1px solid var(--line);
+    border-radius:8px;
     padding:12px;
     text-align:center;
   }
@@ -152,7 +167,7 @@
 
   ul.ingredients{margin:0;padding-left:18px;}
   ul.ingredients li{margin-bottom:5px;font-size:14px;line-height:1.4;}
-  .divider{border:none;border-top:1px dashed var(--line);margin:14px 0;}
+  .divider{border:none;border-top:1px dashed var(--line);margin:16px 0;}
 
   .people-toggle{display:flex;gap:8px;margin-bottom:2px;}
   .pill{
@@ -163,33 +178,41 @@
     font-size:12px;
     cursor:pointer;
     background:var(--paper);
+    transition:background-color .15s, border-color .15s, color .15s;
   }
-  .pill.active{background:var(--sage);color:var(--paper);border-color:var(--sage);}
+  .pill.active{background:var(--sage);color:var(--ink);border-color:var(--sage);}
 
   input[type=number], input[type=text]{
     width:100%;
     padding:10px 12px;
     border:1px solid var(--line);
     background:var(--paper);
+    color:var(--ink);
     font-family:'Inter',sans-serif;
     font-size:14px;
-    border-radius:2px;
+    border-radius:6px;
     margin-bottom:10px;
+    transition:border-color .15s;
   }
-  label{font-size:12px;font-family:'DM Mono',monospace;color:#7a7160;display:block;margin-bottom:4px;}
+  input[type=number]:focus, input[type=text]:focus{
+    outline:none;
+    border-color:var(--board);
+  }
+  label{font-size:12px;font-family:'DM Mono',monospace;color:#8a7d68;display:block;margin-bottom:4px;}
   button.primary{
     width:100%;
     padding:13px;
     background:var(--board);
-    color:var(--paper);
+    color:#1B1712;
     border:none;
-    border-radius:2px;
+    border-radius:8px;
     font-family:'DM Mono',monospace;
     font-size:12px;
     letter-spacing:.08em;
     text-transform:uppercase;
     cursor:pointer;
     font-weight:600;
+    transition:background-color .15s;
   }
   button.primary:active{background:var(--board-dark);}
 
@@ -220,15 +243,17 @@
   }
   .avg-banner{
     background:var(--sage);
-    color:var(--paper);
+    color:var(--ink);
     padding:14px 16px;
     margin-bottom:14px;
+    border-radius:10px;
     display:flex;
     justify-content:space-between;
     align-items:center;
+    box-shadow:0 1px 3px rgba(0,0,0,.25);
   }
-  .meal-row.status-low{border-color:var(--gold);background:#f2e8ce;}
-  .meal-row.status-out{border-color:var(--board);background:#f2e3dc;}
+  .meal-row.status-low{border-color:var(--gold);background:rgba(242,169,59,0.14);}
+  .meal-row.status-out{border-color:var(--board);background:rgba(232,115,14,0.18);}
   .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--sage);}
   .meal-row.status-low .status-dot{background:var(--gold);}
   .meal-row.status-out .status-dot{background:var(--board);}
@@ -244,9 +269,11 @@
     color:#b9ab8e;
     margin-left:8px;
     cursor:pointer;
+    transition:background-color .15s, border-color .15s, color .15s;
   }
   .pin-btn.active{background:var(--gold);border-color:var(--gold);color:var(--card);}
-  .meal-row.always{background:#f6efe0;}
+  .meal-row.always{background:rgba(92,59,122,0.28);}
+  .meal-row.always .meal-name{color:var(--ink);}
   .always-tag{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--gold);margin-left:auto;}
   .ing-item{
     display:flex;
@@ -264,7 +291,7 @@
     flex-shrink:0;
     background:var(--board);
   }
-  .ing-item.have .ing-box{background:transparent;border-color:#c9bfa8;}
+  .ing-item.have .ing-box{background:transparent;border-color:var(--line);}
   .ing-item.have{color:#9a8f78;text-decoration:line-through;}
   .hidden-toggle{
     font-family:'DM Mono',monospace;
@@ -297,6 +324,7 @@
     font-family:'DM Mono',monospace;
     font-size:11.5px;
     opacity:0;
+    box-shadow:0 4px 14px rgba(0,0,0,.4);
     transition:opacity .2s, transform .2s;
     z-index:999;
     pointer-events:none;
@@ -304,17 +332,18 @@
     text-align:center;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-  .toast.error{background:var(--board);}
+  .toast.error{background:var(--board);color:var(--paper);}
   .avg-banner .num{font-family:'Fraunces',serif;font-size:22px;font-weight:700;}
   .avg-banner .lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.85;}
   .note-box{
-    background:#f2e3dc;
+    background:rgba(232,115,14,0.12);
     border-left:3px solid var(--board);
+    border-radius:0 6px 6px 0;
     padding:10px 12px;
     font-size:12.5px;
     line-height:1.45;
     margin-top:12px;
-    color:#5a4a3c;
+    color:var(--ink);
   }
 </style>
 </head>
@@ -323,8 +352,9 @@
 <div class="toast" id="toast"></div>
 
 <header>
-  <h1>Weekly Kitchen Ledger</h1>
+  <h1>🎃 Weekly Kitchen Ledger</h1>
   <p>Chicken math &amp; grocery spend, no guessing</p>
+  <p class="sam-tag">🍬 sam-approved: one bag per trip, no exceptions</p>
 </header>
 
 <div class="tabs">
@@ -385,6 +415,7 @@
         <li>Fridge: only what you're cooking in the next 2-3 days.</li>
         <li>Freezer: everything else, flat in bags, dated.</li>
       </ul>
+      <div class="note-box">🎃 Sam's rule applies here too: always check what's in the bag before you trust it — an undated freezer bag is basically an unchecked piece of candy.</div>
     </div>
     <div class="card">
       <p class="eyebrow">Track this week's pack</p>
