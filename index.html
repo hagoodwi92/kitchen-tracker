@@ -134,7 +134,8 @@
     display:flex;
     align-items:center;
     gap:10px;
-    padding:11px 12px;
+    min-height:48px;
+    padding:14px 12px;
     background:var(--paper);
     border:1px solid var(--line);
     border-radius:8px;
@@ -177,11 +178,16 @@
 
   .people-toggle{display:flex;gap:8px;margin-bottom:2px;}
   .pill{
-    padding:6px 14px;
+    padding:12px 18px;
+    min-height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:1;
     border:1px solid var(--line);
     border-radius:20px;
     font-family:'DM Mono',monospace;
-    font-size:12px;
+    font-size:13px;
     cursor:pointer;
     background:var(--paper);
     transition:background-color .15s, border-color .15s, color .15s;
@@ -207,13 +213,14 @@
   label{font-size:12px;font-family:'DM Mono',monospace;color:#8a7d68;display:block;margin-bottom:4px;}
   button.primary{
     width:100%;
-    padding:13px;
+    min-height:50px;
+    padding:15px;
     background:var(--board);
     color:#1B1712;
     border:none;
     border-radius:8px;
     font-family:'DM Mono',monospace;
-    font-size:12px;
+    font-size:13px;
     letter-spacing:.08em;
     text-transform:uppercase;
     cursor:pointer;
@@ -242,10 +249,11 @@
   }
   .del{
     font-family:'DM Mono',monospace;
-    font-size:16px;
+    font-size:18px;
     color:#b9ab8e;
     cursor:pointer;
-    padding:0 4px;
+    padding:12px 10px;
+    margin:-12px -6px -12px 0;
   }
   .avg-banner{
     background:var(--sage);
@@ -265,13 +273,13 @@
   .meal-row.status-out .status-dot{background:var(--board);}
   .status-label{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#9a8f78;margin-left:auto;}
   .pin-btn{
-    width:22px;height:22px;
+    width:32px;height:32px;
     flex-shrink:0;
     display:flex;align-items:center;justify-content:center;
     border-radius:50%;
     border:1px solid var(--line);
     background:var(--card);
-    font-size:11px;
+    font-size:13px;
     color:#b9ab8e;
     margin-left:8px;
     cursor:pointer;
@@ -292,16 +300,17 @@
   .ing-item{
     display:flex;
     align-items:center;
-    gap:8px;
-    padding:6px 0;
+    gap:10px;
+    min-height:40px;
+    padding:9px 4px;
     cursor:pointer;
     font-size:14px;
     line-height:1.4;
   }
   .ing-box{
-    width:15px;height:15px;
+    width:18px;height:18px;
     border:2px solid var(--board);
-    border-radius:3px;
+    border-radius:4px;
     flex-shrink:0;
     background:var(--board);
   }
@@ -310,9 +319,10 @@
   .hidden-toggle{
     font-family:'DM Mono',monospace;
     font-size:11px;
-    color:var(--sage);
+    color:var(--gold);
     cursor:pointer;
     margin-top:8px;
+    padding:8px 2px;
     display:inline-block;
   }
   .section-head{
