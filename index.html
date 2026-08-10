@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kitchen Ledger">
+<meta name="theme-color" content="#B5540A">
 <title>Weekly Kitchen Ledger</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
@@ -17,19 +21,21 @@
     --line:#4a3f2e;
     --card:#241E16;
   }
-  *{box-sizing:border-box;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%;}
   body{
     margin:0;
     background:var(--paper);
     color:var(--ink);
     font-family:'Inter',sans-serif;
-    padding-bottom:60px;
+    padding-bottom:calc(60px + env(safe-area-inset-bottom));
     -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
   }
   header{
     background:linear-gradient(155deg, var(--board) 0%, var(--board-dark) 100%);
     color:var(--paper);
-    padding:30px 22px 24px;
+    padding:calc(30px + env(safe-area-inset-top)) 22px 24px;
     position:relative;
     overflow:hidden;
     box-shadow:0 2px 14px rgba(0,0,0,.35);
@@ -184,12 +190,12 @@
 
   input[type=number], input[type=text]{
     width:100%;
-    padding:10px 12px;
+    padding:12px;
     border:1px solid var(--line);
     background:var(--paper);
     color:var(--ink);
     font-family:'Inter',sans-serif;
-    font-size:14px;
+    font-size:16px;
     border-radius:6px;
     margin-bottom:10px;
     transition:border-color .15s;
@@ -269,7 +275,15 @@
     color:#b9ab8e;
     margin-left:8px;
     cursor:pointer;
+    position:relative;
     transition:background-color .15s, border-color .15s, color .15s;
+  }
+  .pin-btn::after{
+    content:"";
+    position:absolute;
+    top:50%;left:50%;
+    width:44px;height:44px;
+    transform:translate(-50%,-50%);
   }
   .pin-btn.active{background:var(--gold);border-color:var(--gold);color:var(--card);}
   .meal-row.always{background:rgba(92,59,122,0.28);}
