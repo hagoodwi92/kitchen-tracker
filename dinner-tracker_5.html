@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Kitchen Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --paper:#EDE7DA;
+    --ink:#2B2620;
+    --board:#8A3324;
+    --board-dark:#6E271B;
+    --sage:#5C6B4F;
+    --gold:#C99A3E;
+    --line:#c9bfa8;
+    --card:#F6F2E8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    padding-bottom:60px;
+  }
+  header{
+    background:var(--board);
+    color:var(--paper);
+    padding:28px 20px 22px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::after{
+    content:"";
+    position:absolute;
+    right:-30px; top:-30px;
+    width:140px; height:140px;
+    border-radius:50%;
+    background:var(--board-dark);
+    opacity:.5;
+  }
+  header h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:28px;
+    margin:0 0 4px;
+    letter-spacing:-0.02em;
+    position:relative;
+  }
+  header p{
+    margin:0;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    opacity:.85;
+    position:relative;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+  .tabs{
+    display:flex;
+    background:var(--card);
+    border-bottom:1px solid var(--line);
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  .tab{
+    flex:1;
+    text-align:center;
+    padding:13px 4px;
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:#9a8f78;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:.15s;
+  }
+  .tab.active{
+    color:var(--board);
+    border-bottom:2px solid var(--board);
+    font-weight:600;
+  }
+  main{padding:20px 18px 10px;max-width:520px;margin:0 auto;}
+  .panel{display:none;}
+  .panel.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:18px;
+    margin-bottom:14px;
+  }
+  .eyebrow{
+    font-family:'DM Mono',monospace;
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--sage);
+    margin:0 0 8px;
+  }
+  h2{
+    font-family:'Fraunces',serif;
+    font-size:19px;
+    margin:0 0 12px;
+    font-weight:600;
+  }
+  .meal-grid{display:flex;flex-direction:column;gap:8px;}
+  .meal-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:2px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .meal-row.checked{
+    border-color:var(--board);
+    background:#f2e3dc;
+  }
+  .box{
+    width:18px;height:18px;
+    border:2px solid var(--sage);
+    border-radius:3px;
+    flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .meal-row.checked .box{background:var(--board);border-color:var(--board);}
+  .box::after{content:"";width:9px;height:5px;border-left:2px solid var(--paper);border-bottom:2px solid var(--paper);transform:rotate(-45deg) translateY(-1px);opacity:0;}
+  .meal-row.checked .box::after{opacity:1;}
+  .meal-name{font-weight:600;font-size:15px;}
+  .meal-tag{font-family:'DM Mono',monospace;font-size:10px;color:#9a8f78;margin-left:auto;}
+
+  .stat-row{display:flex;gap:10px;margin-top:14px;}
+  .stat{
+    flex:1;
+    background:var(--paper);
+    border:1px solid var(--line);
+    padding:12px;
+    text-align:center;
+  }
+  .stat .num{font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--board);}
+  .stat .lbl{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#8a8066;margin-top:2px;}
+
+  ul.ingredients{margin:0;padding-left:18px;}
+  ul.ingredients li{margin-bottom:5px;font-size:14px;line-height:1.4;}
+  .divider{border:none;border-top:1px dashed var(--line);margin:14px 0;}
+
+  .people-toggle{display:flex;gap:8px;margin-bottom:2px;}
+  .pill{
+    padding:6px 14px;
+    border:1px solid var(--line);
+    border-radius:20px;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    cursor:pointer;
+    background:var(--paper);
+  }
+  .pill.active{background:var(--sage);color:var(--paper);border-color:var(--sage);}
+
+  input[type=number], input[type=text]{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    border-radius:2px;
+    margin-bottom:10px;
+  }
+  label{font-size:12px;font-family:'DM Mono',monospace;color:#7a7160;display:block;margin-bottom:4px;}
+  button.primary{
+    width:100%;
+    padding:13px;
+    background:var(--board);
+    color:var(--paper);
+    border:none;
+    border-radius:2px;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+    font-weight:600;
+  }
+  button.primary:active{background:var(--board-dark);}
+
+  .log-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .log-item:last-child{border-bottom:none;}
+  .log-date{font-family:'DM Mono',monospace;font-size:11px;color:#8a8066;}
+  .log-amt{font-family:'Fraunces',serif;font-weight:700;font-size:16px;color:var(--board);}
+  .log-note{font-size:12px;color:#7a7160;margin-top:1px;}
+  .empty{
+    text-align:center;
+    padding:24px 10px;
+    color:#9a8f78;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+  }
+  .del{
+    font-family:'DM Mono',monospace;
+    font-size:16px;
+    color:#b9ab8e;
+    cursor:pointer;
+    padding:0 4px;
+  }
+  .avg-banner{
+    background:var(--sage);
+    color:var(--paper);
+    padding:14px 16px;
+    margin-bottom:14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .meal-row.status-low{border-color:var(--gold);background:#f2e8ce;}
+  .meal-row.status-out{border-color:var(--board);background:#f2e3dc;}
+  .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--sage);}
+  .meal-row.status-low .status-dot{background:var(--gold);}
+  .meal-row.status-out .status-dot{background:var(--board);}
+  .status-label{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#9a8f78;margin-left:auto;}
+  .pin-btn{
+    width:22px;height:22px;
+    flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--card);
+    font-size:11px;
+    color:#b9ab8e;
+    margin-left:8px;
+    cursor:pointer;
+  }
+  .pin-btn.active{background:var(--gold);border-color:var(--gold);color:var(--card);}
+  .meal-row.always{background:#f6efe0;}
+  .always-tag{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--gold);margin-left:auto;}
+  .ing-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 0;
+    cursor:pointer;
+    font-size:14px;
+    line-height:1.4;
+  }
+  .ing-box{
+    width:15px;height:15px;
+    border:2px solid var(--board);
+    border-radius:3px;
+    flex-shrink:0;
+    background:var(--board);
+  }
+  .ing-item.have .ing-box{background:transparent;border-color:#c9bfa8;}
+  .ing-item.have{color:#9a8f78;text-decoration:line-through;}
+  .hidden-toggle{
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    color:var(--sage);
+    cursor:pointer;
+    margin-top:8px;
+    display:inline-block;
+  }
+  .section-head{
+    font-family:'DM Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    color:var(--board);
+    margin:16px 0 6px;
+    padding-bottom:4px;
+    border-bottom:1px solid var(--line);
+  }
+  .section-head:first-child{margin-top:0;}
+  .toast{
+    position:fixed;
+    bottom:16px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink);
+    color:var(--paper);
+    padding:9px 16px;
+    border-radius:20px;
+    font-family:'DM Mono',monospace;
+    font-size:11.5px;
+    opacity:0;
+    transition:opacity .2s, transform .2s;
+    z-index:999;
+    pointer-events:none;
+    max-width:85%;
+    text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.error{background:var(--board);}
+  .avg-banner .num{font-family:'Fraunces',serif;font-size:22px;font-weight:700;}
+  .avg-banner .lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.85;}
+  .note-box{
+    background:#f2e3dc;
+    border-left:3px solid var(--board);
+    padding:10px 12px;
+    font-size:12.5px;
+    line-height:1.45;
+    margin-top:12px;
+    color:#5a4a3c;
+  }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<header>
+  <h1>Weekly Kitchen Ledger</h1>
+  <p>Chicken math &amp; grocery spend, no guessing</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="list">List</div>
+  <div class="tab" data-tab="freezer">Freezer</div>
+  <div class="tab" data-tab="spend">Spend</div>
+</div>
+
+<main>
+
+  <!-- LIST TAB -->
+  <div class="panel active" id="panel-list">
+    <div class="card">
+      <p class="eyebrow">Who's eating</p>
+      <div class="people-toggle">
+        <div class="pill" data-people="1">Just me</div>
+        <div class="pill active" data-people="2">Me + GF</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">This week's meals</p>
+      <h2>Pick 4-5</h2>
+      <div class="meal-grid" id="mealGrid"></div>
+      <div class="stat-row">
+        <div class="stat"><div class="num" id="lbsNeeded">0</div><div class="lbl">lbs chicken</div></div>
+        <div class="stat"><div class="num" id="breastsNeeded">0</div><div class="lbl">breasts (~est)</div></div>
+        <div class="stat"><div class="num" id="mealsPicked">0</div><div class="lbl">meals</div></div>
+      </div>
+      <hr class="divider">
+      <label>Already have in freezer (leftover breasts)</label>
+      <input type="number" id="freezerOnHand" placeholder="e.g. 2" min="0">
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">Shopping list</p>
+      <h2>This week</h2>
+      <div id="shopList"></div>
+      <div class="note-box" id="listNote"></div>
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">Standing staples</p>
+      <h2>What's on hand</h2>
+      <p style="font-size:12.5px;color:#7a7160;margin:-4px 0 12px;">Tap the item to cycle stock status. Tap the pin ★ to mark it "always buy" — those skip the stock check and just show up every week.</p>
+      <div class="meal-grid" id="staplesGrid"></div>
+    </div>
+
+  </div>
+
+  <!-- FREEZER TAB -->
+  <div class="panel" id="panel-freezer">
+    <div class="card">
+      <p class="eyebrow">Day-one rule</p>
+      <h2>Portion it now</h2>
+      <ul class="ingredients">
+        <li>The second you're home, split the pack into meal-size bags — don't leave that decision for later in the week.</li>
+        <li>Fridge: only what you're cooking in the next 2-3 days.</li>
+        <li>Freezer: everything else, flat in bags, dated.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Track this week's pack</p>
+      <h2>Freezer log</h2>
+      <label>Total breasts bought</label>
+      <input type="number" id="freezerTotal" placeholder="e.g. 8">
+      <label>Portioned to freezer today?</label>
+      <div class="people-toggle" style="margin-bottom:12px;">
+        <div class="pill active" data-frz="yes">Yes, done</div>
+        <div class="pill" data-frz="no">Not yet</div>
+      </div>
+      <button class="primary" id="saveFreezer">Save</button>
+      <div class="note-box" id="freezerNote" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- SPEND TAB -->
+  <div class="panel" id="panel-spend">
+    <div class="avg-banner">
+      <div>
+        <div class="lbl">4-week average</div>
+        <div class="num" id="avgSpend">$0</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="lbl">Trips logged</div>
+        <div class="num" id="tripCount">0</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">Log a trip</p>
+      <h2>New receipt</h2>
+      <label>Total spent</label>
+      <input type="number" id="spendAmt" placeholder="e.g. 87.42">
+      <label>Note (optional — e.g. "chicken was $16.20")</label>
+      <input type="text" id="spendNote" placeholder="Fred Meyer — Sunday run">
+      <button class="primary" id="saveSpend">Add to ledger</button>
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">History</p>
+      <h2>Recent trips</h2>
+      <div id="spendLog"></div>
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">Fred Meyer receipts</p>
+      <h2>Getting your numbers</h2>
+      <ul class="ingredients">
+        <li>fredmeyer.com or the app → Account → Purchase History has every itemized loyalty-card trip.</li>
+        <li>Screenshot or photograph the total (and chicken line if you want it) and log it here manually — no connector exists yet to pull it automatically.</li>
+        <li>Paper receipt? Snap a photo and paste it into the chat — the total can be read off it directly.</li>
+      </ul>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const SECTION_ORDER = ["Produce","Meat","Dairy & Eggs","Frozen","Pantry & Sauces","Bakery","Beer & Wine","Household","Personal Care","Pet"];
+const SECTION_MAP = {
+  "Onion":"Produce", "Green pepper":"Produce", "Lemon":"Produce", "Garlic":"Produce", "Lime":"Produce",
+  "Yukon gold potatoes":"Produce",
+  "Chicken breast":"Meat",
+  "Shredded cheddar cheese":"Dairy & Eggs", "Butter":"Dairy & Eggs", "Eggs":"Dairy & Eggs", "Yogurt":"Dairy & Eggs",
+  "Frozen broccoli":"Frozen", "Frozen veg":"Frozen",
+  "Taco seasoning (paprika, cumin, chili powder + herbs)":"Pantry & Sauces", "Carb-free tortillas":"Pantry & Sauces",
+  "BBQ sauce":"Pantry & Sauces", "Ketchup":"Pantry & Sauces", "Bouillon cube":"Pantry & Sauces", "Cornstarch":"Pantry & Sauces",
+  "Teriyaki sauce":"Pantry & Sauces", "Soy sauce":"Pantry & Sauces", "Rice":"Pantry & Sauces",
+  "A snack":"Pantry & Sauces", "A sweet":"Pantry & Sauces", "Energy drink mix":"Pantry & Sauces", "Canned soup":"Pantry & Sauces",
+  "Bread":"Bakery",
+  "Beer":"Beer & Wine",
+  "Toilet paper":"Household", "Tissues":"Household", "Dish detergent":"Household", "Dish soap":"Household",
+  "Laundry detergent":"Household", "Spray cleaner":"Household", "Paper towels":"Household", "Trash bags":"Household",
+  "Foil":"Household", "Storage bags":"Household",
+  "Deodorant":"Personal Care", "Razors":"Personal Care", "Shower gel":"Personal Care", "Shampoo":"Personal Care",
+  "Conditioner":"Personal Care", "Toothpaste":"Personal Care",
+  "Cat food (wet)":"Pet", "Cat food (dry)":"Pet", "Cat litter":"Pet", "Poop bags":"Pet", "Cat puke spray":"Pet"
+};
+function sectionOf(item){ return SECTION_MAP[item] || "Pantry & Sauces"; }
+
+let toastTimer;
+function showToast(msg, isError){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.className = 'toast'; }, isError ? 3500 : 1400);
+}
+
+// Aisle numbers for Fred Meyer Burlingame — filled in as you send them.
+// Once a section has a known aisle number, its header shows it and
+// sections re-sort by aisle order instead of the generic list below.
+const AISLE_MAP = {}; // e.g. "Produce": 1, "Dairy & Eggs": 12
+
+function orderedSections(){
+  const known = SECTION_ORDER.filter(s => AISLE_MAP[s] !== undefined);
+  if (known.length === 0) return SECTION_ORDER; // fallback: generic section order
+  const unknown = SECTION_ORDER.filter(s => AISLE_MAP[s] === undefined);
+  known.sort((a,b)=> AISLE_MAP[a] - AISLE_MAP[b]);
+  return known.concat(unknown); // known aisles first in order, rest fall back to the end
+}
+
+const MEALS = {
+  tacos:    {name:"Chicken Tacos",       tag:"stovetop", perPerson:7, extras:["Onion","Green pepper","Taco seasoning (paprika, cumin, chili powder + herbs)","Carb-free tortillas","Shredded cheddar cheese","Lime"]},
+  bbq:      {name:"BBQ Chicken",          tag:"grill",    perPerson:8, extras:["BBQ sauce","Yukon gold potatoes","Ketchup"]},
+  lemon:    {name:"Lemon Butter Chicken", tag:"skillet",  perPerson:7, extras:["Lemon","Butter","Garlic","Bouillon cube","Cornstarch","Frozen broccoli"]},
+  teriyaki: {name:"Teriyaki Chicken",     tag:"stovetop", perPerson:7, extras:["Teriyaki sauce","Garlic","Soy sauce","Cornstarch","Frozen veg","Rice"]}
+};
+
+const STAPLES = ["Eggs","Yogurt","A snack","A sweet","Beer","Toilet paper","Tissues","Dish detergent","Dish soap","Laundry detergent","Spray cleaner","Cat food (wet)","Cat food (dry)","Cat litter","Poop bags","Paper towels","Trash bags","Foil","Storage bags","Bread","Deodorant","Razors","Shower gel","Shampoo","Conditioner","Toothpaste","Energy drink mix","Cat puke spray","Canned soup"];
+const STATUS_CYCLE = ["stocked","low","out"];
+const STATUS_LABEL = {stocked:"Stocked", low:"Low", out:"Out"};
+
+let state = { people:2, picked:{tacos:true,bbq:true,lemon:true,teriyaki:true}, staplesStatus:{}, staplesAlways:{}, ingHave:{"Ketchup":true,"Bouillon cube":true,"Cornstarch":true,"Taco seasoning (paprika, cumin, chili powder + herbs)":true,"Butter":true,"BBQ sauce":true,"Teriyaki sauce":true,"Soy sauce":true,"Frozen broccoli":true,"Frozen veg":true,"Carb-free tortillas":true,"Rice":true}, showHaveItems:false, freezerOnHand:0, freezerLog:null, spendLog:[] };
+STAPLES.forEach(s=>{ if(!(s in state.staplesStatus)) state.staplesStatus[s] = 'stocked'; if(!(s in state.staplesAlways)) state.staplesAlways[s] = false; });
+
+// ── Persistence via localStorage: standard browser storage, built into
+// Chrome/Safari, works the same everywhere. Only requirement: this file
+// needs to be opened in your actual browser, not Claude's in-app viewer.
+const STORAGE_KEY = 'kitchen:state';
+
+function saveState(){
+  const payload = {
+    people: state.people,
+    picked: state.picked,
+    staplesStatus: state.staplesStatus,
+    staplesAlways: state.staplesAlways,
+    ingHave: state.ingHave,
+    freezerOnHand: state.freezerOnHand,
+    freezerLog: state.freezerLog,
+    spendLog: state.spendLog
+  };
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    showToast('Saved');
+    return true;
+  }catch(e){
+    showToast('Save failed: ' + e.message, true);
+    console.error('storage save error', e);
+    return false;
+  }
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw){
+      const saved = JSON.parse(raw);
+      if (saved.people !== undefined) state.people = saved.people;
+      if (saved.picked) state.picked = Object.assign({}, state.picked, saved.picked);
+      if (saved.staplesStatus) state.staplesStatus = Object.assign({}, state.staplesStatus, saved.staplesStatus);
+      if (saved.staplesAlways) state.staplesAlways = Object.assign({}, state.staplesAlways, saved.staplesAlways);
+      if (saved.ingHave) state.ingHave = Object.assign({}, state.ingHave, saved.ingHave);
+      if (saved.freezerOnHand !== undefined) state.freezerOnHand = saved.freezerOnHand;
+      if (saved.freezerLog !== undefined) state.freezerLog = saved.freezerLog;
+      if (saved.spendLog) state.spendLog = saved.spendLog;
+      showToast('Loaded saved data ✓');
+    } else {
+      showToast('No saved data found (fresh start)');
+    }
+  }catch(e){
+    showToast('Storage unavailable: ' + e.message, true);
+    console.error('storage load error', e);
+  }
+  // reflect loaded state into the DOM
+  document.querySelectorAll('[data-people]').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`[data-people="${state.people}"]`)?.classList.add('active');
+  document.getElementById('freezerOnHand').value = state.freezerOnHand || '';
+  if (state.freezerLog){
+    document.getElementById('freezerTotal').value = state.freezerLog.total;
+    document.querySelectorAll('[data-frz]').forEach(x=>x.classList.remove('active'));
+    document.querySelector(`[data-frz="${state.freezerLog.portioned}"]`)?.classList.add('active');
+    frzChoice = state.freezerLog.portioned;
+  }
+  renderMealGrid();
+  renderStaples();
+  renderSpend();
+  calc();
+}
+
+function renderStaples(){
+  const grid = document.getElementById('staplesGrid');
+  grid.innerHTML = '';
+  STAPLES.forEach(s=>{
+    const always = !!state.staplesAlways[s];
+    const status = state.staplesStatus[s] || 'stocked';
+    const row = document.createElement('div');
+    row.className = 'meal-row ' + (always ? 'always' : 'status-' + status);
+    const middle = always
+      ? `<div class="meal-name">${s}</div><div class="always-tag">Always buy</div>`
+      : `<div class="status-dot"></div><div class="meal-name">${s}</div><div class="status-label">${STATUS_LABEL[status]}</div>`;
+    row.innerHTML = `${middle}<div class="pin-btn ${always ? 'active' : ''}" title="Always buy">★</div>`;
+    row.querySelector('.pin-btn').onclick = (ev)=>{
+      ev.stopPropagation();
+      state.staplesAlways[s] = !state.staplesAlways[s];
+      saveState();
+      renderStaples();
+      calc();
+    };
+    row.onclick = ()=>{
+      if (state.staplesAlways[s]) return;
+      const idx = STATUS_CYCLE.indexOf(state.staplesStatus[s]);
+      state.staplesStatus[s] = STATUS_CYCLE[(idx+1) % STATUS_CYCLE.length];
+      saveState();
+      renderStaples();
+      calc();
+    };
+    grid.appendChild(row);
+  });
+}
+
+function ozPerPerson(){ return 7; } // avg raw oz per person per meal across the rotation
+
+function renderMealGrid(){
+  const grid = document.getElementById('mealGrid');
+  grid.innerHTML = '';
+  Object.entries(MEALS).forEach(([key,m])=>{
+    const row = document.createElement('div');
+    row.className = 'meal-row' + (state.picked[key] ? ' checked' : '');
+    row.innerHTML = `<div class="box"></div><div class="meal-name">${m.name}</div><div class="meal-tag">${m.tag}</div>`;
+    row.onclick = ()=>{ state.picked[key] = !state.picked[key]; renderMealGrid(); calc(); };
+    grid.appendChild(row);
+  });
+}
+
+function calc(){
+  const pickedKeys = Object.keys(state.picked).filter(k=>state.picked[k]);
+  const mealsCount = pickedKeys.length;
+  const totalBreastsNeeded = mealsCount; // one larger breast, split, per meal
+  const onHand = state.freezerOnHand || 0;
+  const breasts = Math.max(0, totalBreastsNeeded - onHand); // what's left to buy
+  const lbs = (breasts * 10) / 16; // ~10oz per larger breast
+
+  document.getElementById('lbsNeeded').textContent = lbs.toFixed(1);
+  document.getElementById('breastsNeeded').textContent = breasts;
+  document.getElementById('mealsPicked').textContent = mealsCount;
+
+  const list = document.getElementById('shopList');
+  list.innerHTML = '';
+
+  // gather unique ingredients across picked meals
+  const ingredients = [];
+  pickedKeys.forEach(k=>{
+    MEALS[k].extras.forEach(e=>{ if (!ingredients.includes(e)) ingredients.push(e); });
+  });
+  const needItems = ingredients.filter(e => !state.ingHave[e]);
+  const haveItems = ingredients.filter(e => !!state.ingHave[e]);
+
+  const alwaysItems = STAPLES.filter(s => state.staplesAlways[s]);
+  const lowOutItems = STAPLES.filter(s => !state.staplesAlways[s] && (state.staplesStatus[s] || 'stocked') !== 'stocked');
+
+  // build a flat list of {label, tag} active buys, chicken included
+  const active = [];
+  if (breasts > 0) active.push({ label: `Chicken breast — ${breasts} pieces (~${lbs.toFixed(1)} lbs)`, section: "Meat" });
+  needItems.forEach(e => active.push({ label: e, section: sectionOf(e) }));
+  alwaysItems.forEach(s => active.push({ label: `${s} — always`, section: sectionOf(s) }));
+  lowOutItems.forEach(s => {
+    const tag = state.staplesStatus[s] === 'out' ? ' — out' : ' — running low';
+    active.push({ label: `${s}${tag}`, section: sectionOf(s) });
+  });
+
+  // group by section, in aisle order once known, else generic section order
+  orderedSections().forEach(sec=>{
+    const items = active.filter(a => a.section === sec);
+    if (!items.length) return;
+    const head = document.createElement('div');
+    head.className = 'section-head';
+    head.textContent = AISLE_MAP[sec] !== undefined ? `Aisle ${AISLE_MAP[sec]} — ${sec}` : sec;
+    list.appendChild(head);
+    items.forEach(a=>{
+      const row = document.createElement('div');
+      row.className = 'ing-item';
+      row.innerHTML = `<div class="ing-box"></div><div>${a.label}</div>`;
+      list.appendChild(row);
+    });
+  });
+
+  if (haveItems.length){
+    const toggle = document.createElement('div');
+    toggle.className = 'hidden-toggle';
+    toggle.textContent = state.showHaveItems
+      ? `Hide ${haveItems.length} already-stocked item${haveItems.length===1?'':'s'}`
+      : `${haveItems.length} item${haveItems.length===1?'':'s'} already stocked — tap to review`;
+    toggle.onclick = ()=>{ state.showHaveItems = !state.showHaveItems; calc(); };
+    list.appendChild(toggle);
+
+    if (state.showHaveItems){
+      haveItems.forEach(e=>{
+        const row = document.createElement('div');
+        row.className = 'ing-item have';
+        row.innerHTML = `<div class="ing-box"></div><div>${e}</div>`;
+        row.onclick = ()=>{ state.ingHave[e] = false; saveState(); calc(); };
+        list.appendChild(row);
+      });
+    }
+  }
+
+  // wire up tap-to-mark-stocked for the need-items ingredient rows just rendered
+  Array.from(list.querySelectorAll('.ing-item:not(.have)')).forEach(row=>{
+    const label = row.querySelector('div:last-child').textContent;
+    if (needItems.includes(label)){
+      row.onclick = ()=>{ state.ingHave[label] = true; saveState(); calc(); };
+    }
+  });
+
+  const note = document.getElementById('listNote');
+  if (mealsCount === 0){
+    note.textContent = "Pick your meals above to build the list.";
+  } else {
+    const onHandMsg = onHand > 0 ? ` (${onHand} already covered from the freezer)` : '';
+    const packMsg = breasts < 5
+      ? `That's less than the usual 5-pack — you likely don't need the full family pack, or you'll have breasts left to freeze on purpose.`
+      : `That's close to or more than a standard 5-pack, so what you're buying is about right.`;
+    note.textContent = `${mealsCount} meals need ${totalBreastsNeeded} breasts total${onHandMsg} — buy ${breasts} (~${lbs.toFixed(1)} lbs). ${breasts > 0 ? packMsg : "Freezer's got you covered this week."} Tap any ingredient below once you've got it stocked — it'll stay hidden next time until you run out.`;
+  }
+}
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+  };
+});
+
+document.querySelectorAll('[data-people]').forEach(p=>{
+  p.onclick = ()=>{
+    document.querySelectorAll('[data-people]').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    state.people = parseInt(p.dataset.people);
+    calc();
+    saveState();
+  };
+});
+
+let frzChoice = 'yes';
+document.querySelectorAll('[data-frz]').forEach(p=>{
+  p.onclick = ()=>{
+    document.querySelectorAll('[data-frz]').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    frzChoice = p.dataset.frz;
+  };
+});
+
+document.getElementById('saveFreezer').onclick = async ()=>{
+  const total = document.getElementById('freezerTotal').value || '0';
+  state.freezerLog = { total, portioned: frzChoice, date: new Date().toISOString() };
+  const ok = await saveState();
+  if (!ok) return;
+  const noteEl = document.getElementById('freezerNote');
+  noteEl.style.display = 'block';
+  noteEl.textContent = frzChoice === 'yes'
+    ? `Logged. ${total} breasts portioned — this week's waste risk just dropped a lot.`
+    : `Logged. Portion and freeze the extras today, not at the end of the week — that's the step that's been slipping.`;
+};
+
+function renderSpend(){
+  const entries = state.spendLog || [];
+  const logEl = document.getElementById('spendLog');
+  logEl.innerHTML = '';
+  if (entries.length === 0){
+    logEl.innerHTML = '<div class="empty">No trips logged yet</div>';
+  } else {
+    entries.slice(0,12).forEach((e,i)=>{
+      const d = new Date(e.date);
+      const div = document.createElement('div');
+      div.className = 'log-item';
+      div.innerHTML = `
+        <div>
+          <div class="log-date">${d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>
+          ${e.note ? `<div class="log-note">${e.note}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="log-amt">$${e.amt.toFixed(2)}</div>
+          <div class="del" data-idx="${i}">✕</div>
+        </div>`;
+      div.querySelector('.del').onclick = ()=>{
+        state.spendLog.splice(i,1);
+        saveState();
+        renderSpend();
+      };
+      logEl.appendChild(div);
+    });
+  }
+
+  document.getElementById('tripCount').textContent = entries.length;
+  const last4 = entries.slice(0,4);
+  const avg = last4.length ? (last4.reduce((s,e)=>s+e.amt,0)/last4.length) : 0;
+  document.getElementById('avgSpend').textContent = '$' + avg.toFixed(0);
+}
+
+document.getElementById('saveSpend').onclick = async ()=>{
+  const amt = document.getElementById('spendAmt').value;
+  const note = document.getElementById('spendNote').value;
+  if (!amt || parseFloat(amt) <= 0) return;
+  if (!state.spendLog) state.spendLog = [];
+  state.spendLog.unshift({ amt: parseFloat(amt), note, date: new Date().toISOString() });
+  await saveState();
+  renderSpend();
+  document.getElementById('spendAmt').value = '';
+  document.getElementById('spendNote').value = '';
+};
+
+document.getElementById('freezerOnHand').oninput = (e)=>{
+  state.freezerOnHand = parseInt(e.target.value) || 0;
+  calc();
+  saveState();
+};
+
+loadState();
+</script>
+
+</body>
+</html>
