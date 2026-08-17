@@ -418,6 +418,12 @@
       <h2>This week</h2>
       <div id="shopList"></div>
       <div class="note-box" id="listNote"></div>
+      <hr class="divider">
+      <label>Add a one-time item (won't repeat next week)</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="oneOffInput" placeholder="e.g. sink plug" style="margin-bottom:0;">
+        <button class="primary" id="addOneOff" style="width:auto;padding:0 20px;">Add</button>
+      </div>
     </div>
 
     <div class="card">
@@ -550,11 +556,11 @@ const MEALS = {
   teriyaki: {name:"Teriyaki Chicken",     tag:"stovetop", perPerson:7, extras:["Teriyaki sauce","Garlic","Soy sauce","Cornstarch","Frozen veg","Rice"]}
 };
 
-const STAPLES = ["Eggs","Yogurt","A snack","A sweet","Beer","Toilet paper","Tissues","Dish detergent","Dish soap","Laundry detergent","Spray cleaner","Cat food (wet)","Cat food (dry)","Cat litter","Poop bags","Paper towels","Trash bags","Foil","Storage bags","Bread","Deodorant","Razors","Shower gel","Shampoo","Conditioner","Toothpaste","Energy drink mix","Cat puke spray","Canned soup"];
+const STAPLES = ["Eggs","Yogurt","Protein powder","A snack","A sweet","Beer","Toilet paper","Tissues","Dish detergent","Dish soap","Laundry detergent","Spray cleaner","Cat food (wet)","Cat food (dry)","Cat litter","Poop bags","Paper towels","Trash bags","Foil","Storage bags","Bread","Deodorant","Razors","Shower gel","Shampoo","Conditioner","Toothpaste","Energy drink mix","Cat puke spray","Canned soup"];
 const STATUS_CYCLE = ["stocked","low","out"];
 const STATUS_LABEL = {stocked:"Stocked", low:"Low", out:"Out"};
 
-let state = { people:2, picked:{tacos:true,bbq:true,lemon:true,teriyaki:true}, staplesStatus:{}, staplesAlways:{}, ingHave:{"Ketchup":true,"Bouillon cube":true,"Cornstarch":true,"Taco seasoning (paprika, cumin, chili powder + herbs)":true,"Butter":true,"BBQ sauce":true,"Teriyaki sauce":true,"Soy sauce":true,"Frozen broccoli":true,"Frozen veg":true,"Carb-free tortillas":true,"Rice":true}, showHaveItems:false, freezerOnHand:0, freezerLog:null, spendLog:[] };
+let state = { people:2, picked:{tacos:true,bbq:true,lemon:true,teriyaki:true}, staplesStatus:{}, staplesAlways:{}, ingHave:{"Ketchup":true,"Bouillon cube":true,"Cornstarch":true,"Taco seasoning (paprika, cumin, chili powder + herbs)":true,"Butter":true,"BBQ sauce":true,"Teriyaki sauce":true,"Soy sauce":true,"Frozen broccoli":true,"Frozen veg":true,"Carb-free tortillas":true,"Rice":true}, showHaveItems:false, freezerOnHand:0, freezerLog:null, spendLog:[], oneOffItems:["Sink plug"] };
 STAPLES.forEach(s=>{ if(!(s in state.staplesStatus)) state.staplesStatus[s] = 'stocked'; if(!(s in state.staplesAlways)) state.staplesAlways[s] = false; });
 
 // ── Persistence via localStorage: standard browser storage, built into
@@ -571,7 +577,8 @@ function saveState(){
     ingHave: state.ingHave,
     freezerOnHand: state.freezerOnHand,
     freezerLog: state.freezerLog,
-    spendLog: state.spendLog
+    spendLog: state.spendLog,
+    oneOffItems: state.oneOffItems
   };
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -596,6 +603,7 @@ function loadState(){
       if (saved.freezerOnHand !== undefined) state.freezerOnHand = saved.freezerOnHand;
       if (saved.freezerLog !== undefined) state.freezerLog = saved.freezerLog;
       if (saved.spendLog) state.spendLog = saved.spendLog;
+      if (saved.oneOffItems !== undefined) state.oneOffItems = saved.oneOffItems;
       showToast('Loaded saved data ✓');
     } else {
       showToast('No saved data found (fresh start)');
@@ -716,6 +724,24 @@ function calc(){
       list.appendChild(row);
     });
   });
+
+  if (state.oneOffItems && state.oneOffItems.length){
+    const head = document.createElement('div');
+    head.className = 'section-head';
+    head.textContent = 'One-time';
+    list.appendChild(head);
+    state.oneOffItems.forEach((item, i)=>{
+      const row = document.createElement('div');
+      row.className = 'ing-item';
+      row.innerHTML = `<div class="ing-box"></div><div>${item}</div>`;
+      row.onclick = ()=>{
+        state.oneOffItems.splice(i,1);
+        saveState();
+        calc();
+      };
+      list.appendChild(row);
+    });
+  }
 
   if (haveItems.length){
     const toggle = document.createElement('div');
@@ -849,6 +875,22 @@ document.getElementById('freezerOnHand').oninput = (e)=>{
   calc();
   saveState();
 };
+
+function addOneOffItem(){
+  const input = document.getElementById('oneOffInput');
+  const val = input.value.trim();
+  if (!val) return;
+  if (!state.oneOffItems) state.oneOffItems = [];
+  state.oneOffItems.push(val);
+  saveState();
+  calc();
+  input.value = '';
+  input.focus();
+}
+document.getElementById('addOneOff').onclick = addOneOffItem;
+document.getElementById('oneOffInput').addEventListener('keydown', (e)=>{
+  if (e.key === 'Enter'){ e.preventDefault(); addOneOffItem(); }
+});
 
 loadState();
 </script>
