@@ -571,11 +571,11 @@ const MEALS = {
   teriyaki: {name:"Teriyaki Chicken",     tag:"stovetop", perPerson:7, extras:["Teriyaki sauce","Garlic","Soy sauce","Cornstarch","Frozen veg","Rice"]}
 };
 
-const STAPLES = ["Eggs","Yogurt","Protein powder","A snack","A sweet","Beer","Toilet paper","Tissues","Dish detergent","Dish soap","Laundry detergent","Spray cleaner","Cat food (wet)","Cat food (dry)","Cat litter","Poop bags","Paper towels","Trash bags","Foil","Storage bags","Bread","Deodorant","Razors","Shower gel","Shampoo","Conditioner","Toothpaste","Energy drink mix","Cat puke spray","Canned soup"];
+const STAPLES = ["Eggs","Yogurt","Protein powder","Mio","A snack","A sweet","Beer","Toilet paper","Tissues","Dish detergent","Dish soap","Laundry detergent","Spray cleaner","Cat food (wet)","Cat food (dry)","Cat litter","Poop bags","Paper towels","Trash bags","Foil","Storage bags","Bread","Deodorant","Razors","Shower gel","Shampoo","Conditioner","Toothpaste","Energy drink mix","Cat puke spray","Canned soup"];
 const STATUS_CYCLE = ["stocked","low","out"];
 const STATUS_LABEL = {stocked:"Stocked", low:"Low", out:"Out"};
 
-let state = { people:2, picked:{tacos:true,bbq:true,lemon:true,teriyaki:true}, staplesStatus:{}, staplesAlways:{}, ingHave:{"Ketchup":true,"Bouillon cube":true,"Cornstarch":true,"Taco seasoning (paprika, cumin, chili powder + herbs)":true,"Butter":true,"BBQ sauce":true,"Teriyaki sauce":true,"Soy sauce":true,"Frozen broccoli":true,"Frozen veg":true,"Carb-free tortillas":true,"Rice":true}, showHaveItems:false, freezerOnHand:0, freezerLog:null, spendLog:[], extras:"Sink plug" };
+let state = { people:2, picked:{tacos:true,bbq:true,lemon:true,teriyaki:true}, staplesStatus:{}, staplesAlways:{}, ingHave:{"Ketchup":true,"Bouillon cube":true,"Cornstarch":true,"Taco seasoning (paprika, cumin, chili powder + herbs)":true,"Butter":true,"BBQ sauce":true,"Teriyaki sauce":true,"Soy sauce":true,"Frozen broccoli":true,"Frozen veg":true,"Carb-free tortillas":true,"Rice":true}, showHaveItems:false, freezerOnHand:0, freezerLog:null, spendLog:[], extras:"Sink plug", checkedOff:{} };
 STAPLES.forEach(s=>{ if(!(s in state.staplesStatus)) state.staplesStatus[s] = 'stocked'; if(!(s in state.staplesAlways)) state.staplesAlways[s] = false; });
 
 // ── Persistence via localStorage: standard browser storage, built into
@@ -593,7 +593,8 @@ function saveState(){
     freezerOnHand: state.freezerOnHand,
     freezerLog: state.freezerLog,
     spendLog: state.spendLog,
-    extras: state.extras
+    extras: state.extras,
+    checkedOff: state.checkedOff
   };
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -619,6 +620,7 @@ function loadState(){
       if (saved.freezerLog !== undefined) state.freezerLog = saved.freezerLog;
       if (saved.spendLog) state.spendLog = saved.spendLog;
       if (saved.extras !== undefined) state.extras = saved.extras;
+      if (saved.checkedOff) state.checkedOff = saved.checkedOff;
       showToast('Loaded saved data ✓');
     } else {
       showToast('No saved data found (fresh start)');
@@ -715,15 +717,19 @@ function calc(){
   const alwaysItems = STAPLES.filter(s => state.staplesAlways[s]);
   const lowOutItems = STAPLES.filter(s => !state.staplesAlways[s] && (state.staplesStatus[s] || 'stocked') !== 'stocked');
 
-  // build a flat list of {label, tag} active buys, chicken included
+  // build a flat list of {label, tag, key, kind} active buys, chicken included.
+  // "key" is a stable id used for the checked-off state so relabeling (e.g. out -> low)
+  // doesn't orphan a checkmark, and "kind" decides what a tap on the row does.
   const active = [];
-  if (breasts > 0) active.push({ label: `Chicken breast — ${breasts} pieces (~${lbs.toFixed(1)} lbs)`, section: "Meat" });
-  needItems.forEach(e => active.push({ label: e, section: sectionOf(e) }));
-  alwaysItems.forEach(s => active.push({ label: `${s} — always`, section: sectionOf(s) }));
+  if (breasts > 0) active.push({ label: `Chicken breast — ${breasts} pieces (~${lbs.toFixed(1)} lbs)`, section: "Meat", key: 'chicken', kind: 'checkoff' });
+  needItems.forEach(e => active.push({ label: e, section: sectionOf(e), key: 'ing:'+e, kind: 'have' }));
+  alwaysItems.forEach(s => active.push({ label: `${s} — always`, section: sectionOf(s), key: 'staple:'+s, kind: 'checkoff' }));
   lowOutItems.forEach(s => {
     const tag = state.staplesStatus[s] === 'out' ? ' — out' : ' — running low';
-    active.push({ label: `${s}${tag}`, section: sectionOf(s) });
+    active.push({ label: `${s}${tag}`, section: sectionOf(s), key: 'staple:'+s, kind: 'checkoff' });
   });
+
+  if (!state.checkedOff) state.checkedOff = {};
 
   // group by section, in aisle order once known, else generic section order
   orderedSections().forEach(sec=>{
@@ -735,8 +741,22 @@ function calc(){
     list.appendChild(head);
     items.forEach(a=>{
       const row = document.createElement('div');
-      row.className = 'ing-item';
+      const checked = a.kind === 'checkoff' && !!state.checkedOff[a.key];
+      row.className = 'ing-item' + (checked ? ' have' : '');
       row.innerHTML = `<div class="ing-box"></div><div>${a.label}</div>`;
+      if (a.kind === 'have'){
+        // pantry-style ingredient: tapping means "I've got this now" — it drops off next week's
+        // list too, until it shows back up in the already-stocked review list.
+        row.onclick = ()=>{ state.ingHave[a.label] = true; saveState(); calc(); };
+      } else {
+        // chicken / staple rows: no permanent "have" concept here (that's tracked elsewhere),
+        // so a tap just checks it off for this trip. Tap again to uncheck.
+        row.onclick = ()=>{
+          state.checkedOff[a.key] = !state.checkedOff[a.key];
+          saveState();
+          calc();
+        };
+      }
       list.appendChild(row);
     });
   });
@@ -760,14 +780,6 @@ function calc(){
       });
     }
   }
-
-  // wire up tap-to-mark-stocked for the need-items ingredient rows just rendered
-  Array.from(list.querySelectorAll('.ing-item:not(.have)')).forEach(row=>{
-    const label = row.querySelector('div:last-child').textContent;
-    if (needItems.includes(label)){
-      row.onclick = ()=>{ state.ingHave[label] = true; saveState(); calc(); };
-    }
-  });
 
   const note = document.getElementById('listNote');
   if (mealsCount === 0){
