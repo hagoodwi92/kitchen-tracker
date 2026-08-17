@@ -314,21 +314,37 @@
   .ing-item{
     display:flex;
     align-items:center;
-    gap:10px;
-    min-height:40px;
-    padding:9px 4px;
+    gap:12px;
+    min-height:50px;
+    padding:13px 4px;
     cursor:pointer;
-    font-size:14px;
+    font-size:15px;
     line-height:1.4;
+    border-bottom:1px solid var(--line);
+    transition:background-color .1s;
   }
+  .ing-item:last-child{border-bottom:none;}
+  .ing-item:active{background:rgba(255,255,255,0.04);}
   .ing-box{
-    width:18px;height:18px;
+    width:24px;height:24px;
     border:2px solid var(--board);
-    border-radius:4px;
+    border-radius:6px;
     flex-shrink:0;
     background:var(--board);
+    position:relative;
+  }
+  .ing-box::after{
+    content:"";
+    width:11px;height:6px;
+    position:absolute;
+    top:6px;left:5px;
+    border-left:2px solid var(--paper);
+    border-bottom:2px solid var(--paper);
+    transform:rotate(-45deg);
+    opacity:0;
   }
   .ing-item.have .ing-box{background:transparent;border-color:var(--line);}
+  .ing-item.have .ing-box::after{opacity:1;border-color:var(--gold);}
   .ing-item.have{color:#9a8f78;text-decoration:line-through;}
   .hidden-toggle{
     font-family:'DM Mono',monospace;
@@ -366,10 +382,22 @@
     transition:opacity .2s, transform .2s;
     z-index:999;
     pointer-events:none;
-    max-width:85%;
+    max-width:90%;
     text-align:center;
+    display:flex;
+    align-items:center;
+    gap:10px;
   }
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
+  .toast-undo{
+    color:var(--gold);
+    font-weight:700;
+    text-decoration:underline;
+    text-underline-offset:2px;
+    cursor:pointer;
+    padding:4px 2px;
+    flex-shrink:0;
+  }
   .toast.error{background:var(--board);color:var(--paper);}
   .avg-banner .num{font-family:'Fraunces',serif;font-size:22px;font-weight:700;}
   .avg-banner .lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.85;}
@@ -543,12 +571,27 @@ const SECTION_MAP = {
 function sectionOf(item){ return SECTION_MAP[item] || "Pantry & Sauces"; }
 
 let toastTimer;
-function showToast(msg, isError){
+function showToast(msg, isError, undoFn){
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  t.innerHTML = '';
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = msg;
+  t.appendChild(msgSpan);
+  if (undoFn){
+    const undoSpan = document.createElement('span');
+    undoSpan.className = 'toast-undo';
+    undoSpan.textContent = 'Undo';
+    undoSpan.onclick = (e)=>{
+      e.stopPropagation();
+      clearTimeout(toastTimer);
+      t.className = 'toast';
+      undoFn();
+    };
+    t.appendChild(undoSpan);
+  }
   t.className = 'toast show' + (isError ? ' error' : '');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>{ t.className = 'toast'; }, isError ? 3500 : 1400);
+  toastTimer = setTimeout(()=>{ t.className = 'toast'; }, undoFn ? 4500 : (isError ? 3500 : 1400));
 }
 
 // Aisle numbers for Fred Meyer Burlingame — filled in as you send them.
@@ -747,14 +790,31 @@ function calc(){
       if (a.kind === 'have'){
         // pantry-style ingredient: tapping means "I've got this now" — it drops off next week's
         // list too, until it shows back up in the already-stocked review list.
-        row.onclick = ()=>{ state.ingHave[a.label] = true; saveState(); calc(); };
+        row.onclick = ()=>{
+          state.ingHave[a.label] = true;
+          saveState();
+          calc();
+          showToast(`${a.label} checked off`, false, ()=>{
+            state.ingHave[a.label] = false;
+            saveState();
+            calc();
+          });
+        };
       } else {
         // chicken / staple rows: no permanent "have" concept here (that's tracked elsewhere),
         // so a tap just checks it off for this trip. Tap again to uncheck.
         row.onclick = ()=>{
-          state.checkedOff[a.key] = !state.checkedOff[a.key];
+          const nowChecked = !state.checkedOff[a.key];
+          state.checkedOff[a.key] = nowChecked;
           saveState();
           calc();
+          if (nowChecked){
+            showToast(`${a.label} checked off`, false, ()=>{
+              state.checkedOff[a.key] = false;
+              saveState();
+              calc();
+            });
+          }
         };
       }
       list.appendChild(row);
