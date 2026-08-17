@@ -754,18 +754,16 @@ function calc(){
   pickedKeys.forEach(k=>{
     MEALS[k].extras.forEach(e=>{ if (!ingredients.includes(e)) ingredients.push(e); });
   });
-  const needItems = ingredients.filter(e => !state.ingHave[e]);
-  const haveItems = ingredients.filter(e => !!state.ingHave[e]);
-
   const alwaysItems = STAPLES.filter(s => state.staplesAlways[s]);
   const lowOutItems = STAPLES.filter(s => !state.staplesAlways[s] && (state.staplesStatus[s] || 'stocked') !== 'stocked');
 
   // build a flat list of {label, tag, key, kind} active buys, chicken included.
   // "key" is a stable id used for the checked-off state so relabeling (e.g. out -> low)
   // doesn't orphan a checkmark, and "kind" decides what a tap on the row does.
+  // Everything stays visible once checked — crossed out in place, not hidden away.
   const active = [];
   if (breasts > 0) active.push({ label: `Chicken breast — ${breasts} pieces (~${lbs.toFixed(1)} lbs)`, section: "Meat", key: 'chicken', kind: 'checkoff' });
-  needItems.forEach(e => active.push({ label: e, section: sectionOf(e), key: 'ing:'+e, kind: 'have' }));
+  ingredients.forEach(e => active.push({ label: e, section: sectionOf(e), key: 'ing:'+e, kind: 'have' }));
   alwaysItems.forEach(s => active.push({ label: `${s} — always`, section: sectionOf(s), key: 'staple:'+s, kind: 'checkoff' }));
   lowOutItems.forEach(s => {
     const tag = state.staplesStatus[s] === 'out' ? ' — out' : ' — running low';
@@ -784,62 +782,30 @@ function calc(){
     list.appendChild(head);
     items.forEach(a=>{
       const row = document.createElement('div');
-      const checked = a.kind === 'checkoff' && !!state.checkedOff[a.key];
-      row.className = 'ing-item' + (checked ? ' have' : '');
+      const isChecked = a.kind === 'have' ? !!state.ingHave[a.label] : !!state.checkedOff[a.key];
+      row.className = 'ing-item' + (isChecked ? ' have' : '');
       row.innerHTML = `<div class="ing-box"></div><div>${a.label}</div>`;
-      if (a.kind === 'have'){
-        // pantry-style ingredient: tapping means "I've got this now" — it drops off next week's
-        // list too, until it shows back up in the already-stocked review list.
-        row.onclick = ()=>{
-          state.ingHave[a.label] = true;
-          saveState();
-          calc();
+      // Every row works the same way now: tap toggles checked on/off, stays visible either way
+      // (crossed out when checked) instead of disappearing — easier to track mid-trip, and a
+      // stray tap is always one tap (or the Undo in the toast) away from being fixed.
+      row.onclick = ()=>{
+        const store = a.kind === 'have' ? state.ingHave : state.checkedOff;
+        const key = a.kind === 'have' ? a.label : a.key;
+        const nowChecked = !store[key];
+        store[key] = nowChecked;
+        saveState();
+        calc();
+        if (nowChecked){
           showToast(`${a.label} checked off`, false, ()=>{
-            state.ingHave[a.label] = false;
+            store[key] = false;
             saveState();
             calc();
           });
-        };
-      } else {
-        // chicken / staple rows: no permanent "have" concept here (that's tracked elsewhere),
-        // so a tap just checks it off for this trip. Tap again to uncheck.
-        row.onclick = ()=>{
-          const nowChecked = !state.checkedOff[a.key];
-          state.checkedOff[a.key] = nowChecked;
-          saveState();
-          calc();
-          if (nowChecked){
-            showToast(`${a.label} checked off`, false, ()=>{
-              state.checkedOff[a.key] = false;
-              saveState();
-              calc();
-            });
-          }
-        };
-      }
+        }
+      };
       list.appendChild(row);
     });
   });
-
-  if (haveItems.length){
-    const toggle = document.createElement('div');
-    toggle.className = 'hidden-toggle';
-    toggle.textContent = state.showHaveItems
-      ? `Hide ${haveItems.length} already-stocked item${haveItems.length===1?'':'s'}`
-      : `${haveItems.length} item${haveItems.length===1?'':'s'} already stocked — tap to review`;
-    toggle.onclick = ()=>{ state.showHaveItems = !state.showHaveItems; calc(); };
-    list.appendChild(toggle);
-
-    if (state.showHaveItems){
-      haveItems.forEach(e=>{
-        const row = document.createElement('div');
-        row.className = 'ing-item have';
-        row.innerHTML = `<div class="ing-box"></div><div>${e}</div>`;
-        row.onclick = ()=>{ state.ingHave[e] = false; saveState(); calc(); };
-        list.appendChild(row);
-      });
-    }
-  }
 
   const note = document.getElementById('listNote');
   if (mealsCount === 0){
@@ -849,7 +815,7 @@ function calc(){
     const packMsg = breasts < 5
       ? `That's less than the usual 5-pack — you likely don't need the full family pack, or you'll have breasts left to freeze on purpose.`
       : `That's close to or more than a standard 5-pack, so what you're buying is about right.`;
-    note.textContent = `${mealsCount} meals need ${totalBreastsNeeded} breasts total${onHandMsg} — buy ${breasts} (~${lbs.toFixed(1)} lbs). ${breasts > 0 ? packMsg : "Freezer's got you covered this week."} Tap any ingredient below once you've got it stocked — it'll stay hidden next time until you run out.`;
+    note.textContent = `${mealsCount} meals need ${totalBreastsNeeded} breasts total${onHandMsg} — buy ${breasts} (~${lbs.toFixed(1)} lbs). ${breasts > 0 ? packMsg : "Freezer's got you covered this week."} Tap any item once you've got it — it'll stay in the list, just crossed out, so you can always see what's left.`;
   }
 }
 
