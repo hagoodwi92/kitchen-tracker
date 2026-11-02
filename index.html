@@ -73,6 +73,15 @@
     font-size:10.5px;
     letter-spacing:.06em;
   }
+  header p.sync-tag{
+    margin-top:4px;
+    padding:6px 0;
+    color:var(--paper);
+    opacity:.8;
+    font-size:10px;
+    letter-spacing:.06em;
+    cursor:pointer;
+  }
   .tabs{
     display:flex;
     background:var(--card);
@@ -421,6 +430,7 @@
   <h1>🎃 Weekly Kitchen Ledger</h1>
   <p>Chicken math &amp; grocery spend, no guessing</p>
   <p class="sam-tag">🍬 sam-approved: one bag per trip, no exceptions</p>
+  <p class="sync-tag" id="syncStatus" style="display:none"></p>
 </header>
 
 <div class="tabs">
@@ -626,8 +636,14 @@ STAPLES.forEach(s=>{ if(!(s in state.staplesStatus)) state.staplesStatus[s] = 's
 // needs to be opened in your actual browser, not Claude's in-app viewer.
 const STORAGE_KEY = 'kitchen:state';
 
-function saveState(){
-  const payload = {
+// ── Cloud sync, so the list follows you between your Mac and your phone ──────
+// Paste your Firebase Realtime Database address here, for example:
+//   'https://my-kitchen-default-rtdb.firebaseio.com/ledger.json'
+// While this is empty the app just stays on this device, like before.
+const SYNC_URL = 'https://kitchen-ledger-49df6-default-rtdb.firebaseio.com/ledger.json';
+
+function buildPayload(){
+  return {
     people: state.people,
     picked: state.picked,
     staplesStatus: state.staplesStatus,
@@ -637,11 +653,36 @@ function saveState(){
     freezerLog: state.freezerLog,
     spendLog: state.spendLog,
     extras: state.extras,
-    checkedOff: state.checkedOff
+    checkedOff: state.checkedOff,
+    updatedAt: state.updatedAt || 0
   };
+}
+
+function applyPayload(saved){
+  if (saved.people !== undefined) state.people = saved.people;
+  if (saved.picked) state.picked = Object.assign({}, state.picked, saved.picked);
+  if (saved.staplesStatus) state.staplesStatus = Object.assign({}, state.staplesStatus, saved.staplesStatus);
+  if (saved.staplesAlways) state.staplesAlways = Object.assign({}, state.staplesAlways, saved.staplesAlways);
+  if (saved.ingHave) state.ingHave = Object.assign({}, state.ingHave, saved.ingHave);
+  if (saved.freezerOnHand !== undefined) state.freezerOnHand = saved.freezerOnHand;
+  if (saved.freezerLog !== undefined) state.freezerLog = saved.freezerLog;
+  if (saved.spendLog) state.spendLog = saved.spendLog;
+  if (saved.extras !== undefined) state.extras = saved.extras;
+  if (saved.checkedOff) state.checkedOff = saved.checkedOff;
+  state.updatedAt = saved.updatedAt || 0;
+}
+
+function persistLocal(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(buildPayload())); }
+  catch(e){ console.error('storage save error', e); }
+}
+
+function saveState(){
+  state.updatedAt = Date.now();
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(buildPayload()));
     showToast('Saved');
+    schedulePush();
     return true;
   }catch(e){
     showToast('Save failed: ' + e.message, true);
@@ -649,21 +690,12 @@ function saveState(){
     return false;
   }
 }
+
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw){
-      const saved = JSON.parse(raw);
-      if (saved.people !== undefined) state.people = saved.people;
-      if (saved.picked) state.picked = Object.assign({}, state.picked, saved.picked);
-      if (saved.staplesStatus) state.staplesStatus = Object.assign({}, state.staplesStatus, saved.staplesStatus);
-      if (saved.staplesAlways) state.staplesAlways = Object.assign({}, state.staplesAlways, saved.staplesAlways);
-      if (saved.ingHave) state.ingHave = Object.assign({}, state.ingHave, saved.ingHave);
-      if (saved.freezerOnHand !== undefined) state.freezerOnHand = saved.freezerOnHand;
-      if (saved.freezerLog !== undefined) state.freezerLog = saved.freezerLog;
-      if (saved.spendLog) state.spendLog = saved.spendLog;
-      if (saved.extras !== undefined) state.extras = saved.extras;
-      if (saved.checkedOff) state.checkedOff = saved.checkedOff;
+      applyPayload(JSON.parse(raw));
       showToast('Loaded saved data ✓');
     } else {
       showToast('No saved data found (fresh start)');
@@ -672,11 +704,17 @@ function loadState(){
     showToast('Storage unavailable: ' + e.message, true);
     console.error('storage load error', e);
   }
-  // reflect loaded state into the DOM
+  reflectState();
+}
+
+// Push everything in `state` back onto the screen (used on load and after a sync pull).
+function reflectState(){
   document.querySelectorAll('[data-people]').forEach(p=>p.classList.remove('active'));
   document.querySelector(`[data-people="${state.people}"]`)?.classList.add('active');
-  document.getElementById('freezerOnHand').value = state.freezerOnHand || '';
-  document.getElementById('extrasInput').value = state.extras || '';
+  const onHandEl = document.getElementById('freezerOnHand');
+  if (document.activeElement !== onHandEl) onHandEl.value = state.freezerOnHand || '';
+  const extrasEl = document.getElementById('extrasInput');
+  if (document.activeElement !== extrasEl) extrasEl.value = state.extras || '';
   if (state.freezerLog){
     document.getElementById('freezerTotal').value = state.freezerLog.total;
     document.querySelectorAll('[data-frz]').forEach(x=>x.classList.remove('active'));
@@ -687,6 +725,77 @@ function loadState(){
   renderStaples();
   renderSpend();
   calc();
+}
+
+// ── Sync plumbing: newest save wins. Pull on open, on coming back to the app,
+// when the connection returns, and every 30s while the app is on screen.
+// Everything is stored as one JSON string so item names with odd characters
+// can never upset the database. If the network is down, nothing breaks: the
+// list keeps working on this device and catches up on the next successful sync.
+let pushTimer = null;
+let syncBusy = false;
+
+function setSyncStatus(kind){
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  if (!SYNC_URL){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = kind === 'ok'   ? '☁ synced · tap to refresh'
+                 : kind === 'busy' ? '☁ syncing…'
+                 :                   '☁ offline · saved on this device · tap to retry';
+}
+
+function schedulePush(){
+  if (!SYNC_URL) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushNow, 700);
+}
+
+async function pushNow(){
+  if (!SYNC_URL) return false;
+  try{
+    setSyncStatus('busy');
+    const body = JSON.stringify({ updatedAt: state.updatedAt || 0, data: JSON.stringify(buildPayload()) });
+    const r = await fetch(SYNC_URL, { method:'PUT', headers:{'Content-Type':'application/json'}, body });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    setSyncStatus('ok');
+    return true;
+  }catch(e){
+    console.warn('sync push failed', e);
+    setSyncStatus('offline');
+    return false;
+  }
+}
+
+async function pullNow(){
+  if (!SYNC_URL || syncBusy) return;
+  syncBusy = true;
+  try{
+    setSyncStatus('busy');
+    const r = await fetch(SYNC_URL, { cache:'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const remote = await r.json();            // null until something has been saved
+    const remoteAt = (remote && remote.updatedAt) || 0;
+    const localAt = state.updatedAt || 0;
+    if (remote && remote.data && remoteAt > localAt){
+      applyPayload(JSON.parse(remote.data));
+      state.updatedAt = remoteAt;
+      persistLocal();
+      reflectState();
+      showToast('Updated from your other device ✓');
+      setSyncStatus('ok');
+    } else if (localAt > remoteAt || !remote){
+      if (!localAt){ state.updatedAt = Date.now(); persistLocal(); }   // first device: seed the cloud copy
+      await pushNow();
+    } else {
+      setSyncStatus('ok');
+    }
+  }catch(e){
+    console.warn('sync pull failed', e);
+    setSyncStatus('offline');
+  }finally{
+    syncBusy = false;
+  }
 }
 
 function renderStaples(){
@@ -923,7 +1032,15 @@ document.getElementById('extrasInput').addEventListener('blur', ()=>{
   saveState();
 });
 
+document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) pullNow(); });
+window.addEventListener('online', pullNow);
+window.addEventListener('pageshow', (e)=>{ if (e.persisted) pullNow(); });
+setInterval(()=>{ if (!document.hidden) pullNow(); }, 30000);
+document.getElementById('syncStatus').onclick = pullNow;
+
 loadState();
+setSyncStatus('busy');
+pullNow();
 </script>
 
 </body>
